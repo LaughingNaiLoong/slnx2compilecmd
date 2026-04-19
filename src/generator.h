@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 
 void generateCompileCommands(const std::string &slnx_path,

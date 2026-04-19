@@ -1,9 +1,13 @@
+#include "logging.h"
+#include "macros.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <pugixml.hpp>
+#include <regex>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -11,7 +15,7 @@ using namespace nlohmann;
 
 namespace fs = std::filesystem;
 
-std::string make_absolute(const std::string &path, const fs::path &base_path) {
+std::string makeAbsolute(const std::string &path, const fs::path &base_path) {
   fs::path p(path);
   if (p.is_absolute()) {
     return p.string();
@@ -28,16 +32,23 @@ std::string trim(const std::string &str) {
 }
 
 std::map<std::string, std::vector<std::string>>
-parse_vcxproj(const fs::path &vcxproj_path, const fs::path &solution_dir) {
-
+parseVcxproj(const fs::path &vcxproj_path, const fs::path &solution_dir) {
+  fs::path project_dir = vcxproj_path.parent_path();
+  setMacro("ProjectDir", project_dir.string());
+  auto project_name = std::regex_replace(vcxproj_path.filename().string(),
+                                         std::regex{R"(\.vcxproj)"}, "");
+  setMacro("ProjectName", project_name);
+  std::ifstream f(vcxproj_path);
+  std::stringstream buf;
+  buf << f.rdbuf();
+  std::string content = buf.str();
+  content = replaceMacros(content);
   std::map<std::string, std::vector<std::string>> result;
   pugi::xml_document doc;
-  if (!doc.load_file(vcxproj_path.string().c_str())) {
+  if (!doc.load_string(content.c_str())) {
     std::cerr << "Failed to load vcxproj: " << vcxproj_path << std::endl;
     return result;
   }
-
-  fs::path project_dir = vcxproj_path.parent_path();
 
   std::vector<std::string> global_include_dirs;
   std::vector<std::string> global_defines;
@@ -65,7 +76,8 @@ parse_vcxproj(const fs::path &vcxproj_path, const fs::path &solution_dir) {
        doc.child("Project").children("PropertyGroup")) {
     if (prop_group.attribute("Condition") &&
         !std::string(prop_group.attribute("Condition").value()).empty()) {
-
+      auto condition = std::string(prop_group.attribute("Condition").value());
+      // TODO: 实现Condition解析
       continue;
     }
     pugi::xml_node cl_node = prop_group.child("ClCompile");
@@ -93,7 +105,7 @@ parse_vcxproj(const fs::path &vcxproj_path, const fs::path &solution_dir) {
       auto dirs = split_semicolon(inc_str);
       for (auto &dir : dirs) {
 
-        std::string abs_dir = make_absolute(dir, project_dir);
+        std::string abs_dir = makeAbsolute(dir, project_dir);
         global_include_dirs.push_back("/I\"" + abs_dir + "\"");
       }
     }
@@ -108,14 +120,8 @@ parse_vcxproj(const fs::path &vcxproj_path, const fs::path &solution_dir) {
 
     if (auto lang = cl_compile_settings.child("LanguageStandard")) {
       std::string lang_val = lang.child_value();
-      if (lang_val == "stdcpp17")
-        language_standard = "/std:c++17";
-      else if (lang_val == "stdcpp14")
-        language_standard = "/std:c++14";
-      else if (lang_val == "stdcpp20")
-        language_standard = "/std:c++20";
-      else if (lang_val == "stdcpplatest")
-        language_standard = "/std:c++latest";
+      language_standard =
+          std::regex_replace(lang_val, std::regex{"stdcpp"}, "/std:c++");
     }
   }
 
@@ -128,7 +134,7 @@ parse_vcxproj(const fs::path &vcxproj_path, const fs::path &solution_dir) {
         std::string inc_str = inc.child_value();
         auto dirs = split_semicolon(inc_str);
         for (auto &dir : dirs) {
-          std::string abs_dir = make_absolute(dir, project_dir);
+          std::string abs_dir = makeAbsolute(dir, project_dir);
           global_include_dirs.push_back("/I\"" + abs_dir + "\"");
         }
       }
@@ -143,14 +149,8 @@ parse_vcxproj(const fs::path &vcxproj_path, const fs::path &solution_dir) {
 
       if (auto lang = cl_node.child("LanguageStandard")) {
         std::string lang_val = lang.child_value();
-        if (lang_val == "stdcpp17")
-          language_standard = "/std:c++17";
-        else if (lang_val == "stdcpp14")
-          language_standard = "/std:c++14";
-        else if (lang_val == "stdcpp20")
-          language_standard = "/std:c++20";
-        else if (lang_val == "stdcpplatest")
-          language_standard = "/std:c++latest";
+        language_standard =
+            std::regex_replace(lang_val, std::regex{"stdcpp"}, "/std:c++");
       }
       break;
     }
@@ -177,10 +177,10 @@ parse_vcxproj(const fs::path &vcxproj_path, const fs::path &solution_dir) {
       fs::path source_path(include_attr);
       std::string ext = source_path.extension().string();
 
-      if (ext != ".cpp" && ext != ".c" && ext != ".cc")
+      if (!std::regex_match(ext, std::regex{"\\.cc|\\.cpp|\\.cxx|\\.c"}))
         continue;
 
-      std::string abs_source = make_absolute(include_attr, project_dir);
+      std::string abs_source = makeAbsolute(include_attr, project_dir);
 
       std::vector<std::string> file_args = base_args;
       file_args.push_back("\"" + abs_source + "\"");
@@ -201,8 +201,14 @@ void generateCompileCommands(const std::string &slnx_path,
 
   fs::path solution_dir = slnx_file.parent_path();
 
+  std::ifstream f(slnx_file);
+  std::stringstream buf;
+  buf << f.rdbuf();
+  std::string content = buf.str();
+  content = replaceMacros(content);
+
   pugi::xml_document doc;
-  if (!doc.load_file(slnx_path.c_str())) {
+  if (!doc.load_string(content.c_str())) {
     std::cerr << "Failed to parse slnx file: " << slnx_path << std::endl;
     return;
   }
@@ -227,7 +233,7 @@ void generateCompileCommands(const std::string &slnx_path,
     }
 
     std::cout << "Processing project: " << proj_path << std::endl;
-    auto source_map = parse_vcxproj(proj_path, solution_dir);
+    auto source_map = parseVcxproj(proj_path, solution_dir);
 
     std::string working_dir = proj_path.parent_path().string();
 
@@ -254,8 +260,8 @@ void generateCompileCommands(const std::string &slnx_path,
   }
 
   json j = commands;
-  out << j;
+  out << j.dump(4);
 
-  std::cout << "Generated " << commands.size() << " entries in " << output_path
-            << std::endl;
+  std::cout << "\033[92mGenerated " << commands.size() << " entries in "
+            << output_path << "\033[0m" << std::endl;
 }
