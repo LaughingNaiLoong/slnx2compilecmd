@@ -19,3 +19,30 @@ s2cc::utils::replaceWithFunction(std::string str, std::regex reg,
   result.append(str, lastPos, str.length() - lastPos);
   return result;
 }
+
+std::vector<std::string> s2cc::utils::split(const std::string &s,
+                                            const std::string &sep,
+                                            bool skipEmptyStr) {
+  std::vector<std::string> tokens;
+  size_t start = 0;
+  size_t end = s.find(sep);
+  while (end != std::string::npos) {
+    std::string token = s.substr(start, end - start);
+    if (!skipEmptyStr || !token.empty())
+      tokens.push_back(std::move(token));
+    start = end + sep.length();
+    end = s.find(sep, start);
+  }
+  std::string last_token = s.substr(start);
+  if (!skipEmptyStr || !last_token.empty())
+    tokens.push_back(std::move(last_token));
+  return tokens;
+}
+
+std::string s2cc::utils::join(std::vector<std::string> v, std::string sep) {
+  std::string res = "";
+  for (auto s : v) {
+    res += s + sep;
+  }
+  return res;
+}

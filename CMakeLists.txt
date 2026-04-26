@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 4.3)
-project(Slnx2CompileCmd VERSION 1.0.0 LANGUAGES CXX)
+project(s2cc VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
 include(FetchContent)
 
 FetchContent_Declare(
-pugixml
-GIT_REPOSITORY https://github.com/zeux/pugixml.git
-GIT_TAG v1.15
+    pugixml
+    GIT_REPOSITORY https://github.com/zeux/pugixml.git
+    GIT_TAG v1.15
 )
 FetchContent_MakeAvailable(pugixml)
 
