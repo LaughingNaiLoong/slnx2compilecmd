@@ -4,21 +4,15 @@
 ![GitHub Repo stars](https://img.shields.io/github/stars/LaughingNailoong/slnx2compilecmd?style=flat)
 ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/LaughingNailoong/slnx2compilecmd/main)
 
-
-
 A tool that converts Visual Studio 2026 solution files(.slnx) into `compile_commands.json` compilation database.
 
 ## Usage
-#### Example
-
-```Shell
-s2cc ./app.slnx --outdir . -D Configure=Debug -D Platform=x64
-```
 
 #### Arguments
 
 **Basic usage:**
 `s2cc [path] ...`
+
 path: Path to your solution file.
 
 `--outdir [path]` sets the directory to save the `compile_commands.json` file.
@@ -29,7 +23,15 @@ path: Path to your solution file.
 > Usually, we have to specify the values of variables Configuration(e.g,Debug, Release) and Platform(e.g,x64, Win32) to make s2cc select correct configuration; otherwise, it won't output anything.
 
 `--version` prints version information.
+
 `--help` shows help message
 
+#### Example
+
+```Shell
+s2cc ./app.slnx --outdir . -D Configure=Debug -D Platform=x64
+```
+
 ## Installation
+
 Download the executable file from releases and add it to `PATH`.
