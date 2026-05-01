@@ -29,7 +29,7 @@ path: Path to your solution file.
 #### Example
 
 ```Shell
-s2cc ./app.slnx --outdir . -D Configure=Debug -D Platform=x64
+s2cc ./app.slnx --outdir . -D Configuration=Debug -D Platform=x64
 ```
 
 ## Installation
