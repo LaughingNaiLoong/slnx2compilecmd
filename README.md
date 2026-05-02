@@ -3,7 +3,7 @@
 ![Version](https://img.shields.io/badge/version-1.0.0-green)
 ![GitHub Repo stars](https://img.shields.io/github/stars/LaughingNailoong/slnx2compilecmd?style=flat)
 ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/LaughingNailoong/slnx2compilecmd/main)
-[简体中文](./readme.zh_CN.md)
+[简体中文](./README.zh_CN.md)
 
 A tool that converts Visual Studio 2026 solution files(.slnx) into `compile_commands.json` compilation database.
 
